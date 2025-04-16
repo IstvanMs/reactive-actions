@@ -1,0 +1,11 @@
+===============================================================================
+
+ReactiveActions has been installed successfully!
+
+Routes have been added to your config/routes.rb file:
+  mount ReactiveActions::Engine, at: '/reactive_actions'
+
+You can now access the reactive actions functionality at:
+  http://localhost:3000/reactive_actions
+
+===============================================================================
