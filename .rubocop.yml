@@ -1,0 +1,67 @@
+require:
+  - rubocop-rails
+  - rubocop-rspec
+  - rubocop-factory_bot
+
+AllCops:
+  TargetRubyVersion: 3.0
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - 'bin/**/*'
+    - 'vendor/**/*'
+    - 'tmp/**/*'
+    - 'node_modules/**/*'
+    - 'test/dummy/**/*'
+    - 'db/schema.rb'
+
+Naming/FileName:
+  Exclude:
+    - 'lib/reactive-actions.rb'
+
+Style/Documentation:
+  Enabled: true
+
+Layout/LineLength:
+  Max: 200
+  # Exclude spec files from line length checks
+  Exclude:
+    - 'spec/**/*_spec.rb'
+
+Metrics/BlockLength:
+  Max: 30
+  # Exclude spec files from block length checks
+  Exclude:
+    - 'spec/**/*'
+    - 'lib/tasks/**/*.rake'
+
+Metrics/ModuleLength:
+  Max: 100
+  # Exclude spec files from module length checks
+  Exclude:
+    - 'spec/**/*'
+
+Metrics/ClassLength:
+  Max: 200
+
+Metrics/MethodLength:
+  Max: 20
+
+Metrics/AbcSize:
+  Max: 25
+
+# RSpec specific configurations
+RSpec/DescribeClass:
+  Enabled: true
+
+RSpec/ExampleLength:
+  Max: 15
+  Exclude:
+    - 'spec/system/**/*'
+    - 'spec/requests/**/*'
+
+RSpec/MultipleExpectations:
+  Max: 5
+
+RSpec/NestedGroups:
+  Max: 4

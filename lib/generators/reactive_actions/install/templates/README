@@ -6,6 +6,27 @@ Routes have been added to your config/routes.rb file:
   mount ReactiveActions::Engine, at: '/reactive_actions'
 
 You can now access the reactive actions functionality at:
-  http://localhost:3000/reactive_actions
+  http://localhost:3000/reactive_actions/execute
+
+A sample action has been created at:
+  app/reactive_actions/example_action.rb
+
+You can try it out with:
+  
+  # Using HTTP
+  curl -X POST http://localhost:3000/reactive_actions/execute \
+    -H "Content-Type: application/json" \
+    -d '{"action_name": "example", "action_params": {"name": "YourName"}}'
+  
+  # Using JavaScript client
+  ReactiveActions.execute('example', { name: 'YourName' })
+    .then(response => console.log(response))
+
+To create your own actions, add more files to the app/reactive_actions directory.
+Each action should inherit from ReactiveActions::ReactiveAction and define
+at least the `action` and `response` methods.
+
+For more information, see the documentation at:
+  https://github.com/IstvanMs/reactive-actions
 
 ===============================================================================

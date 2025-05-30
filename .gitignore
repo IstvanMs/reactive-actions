@@ -1,0 +1,67 @@
+# Ignore bundler config
+/.bundle/
+
+# Ignore all logfiles and tempfiles.
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+# RSpec files
+/spec/examples.txt
+/spec/reports/
+/spec/tmp/
+
+# Ignore generated files
+/coverage/
+/doc/
+/pkg/
+/node_modules/
+/.idea/
+*.gem
+
+# Ignore test dummy application files
+/test/dummy/db/*.sqlite3
+/test/dummy/db/*.sqlite3-journal
+/test/dummy/db/*.sqlite3-*
+/test/dummy/log/*
+/test/dummy/tmp/*
+/test/dummy/storage/*
+/test/dummy/public/assets
+/test/dummy/.byebug_history
+/test/dummy/config/master.key
+/test/dummy/config/credentials/*.key
+/test/dummy/node_modules/
+/test/dummy/.github/
+
+# Secrets
+.env
+.env.test
+.env.development
+.env.production
+/config/master.key
+/test/dummy/config/master.key
+/test/dummy/config/credentials/*.key
+*.secret
+/tmp/local_secret.txt
+
+# OS-specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Helper scripts
+/bin/rebuild_gem.sh
