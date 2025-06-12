@@ -1,17 +1,17 @@
 # ReactiveActions
 
-ReactiveActions is a Rails gem that provides a framework for handling reactive actions in your Rails application.
+ReactiveActions is a Rails gem that provides a framework for handling reactive actions in your Rails application with Stimulus-style DOM binding support.
 
 ## 🚧 Status
 
-This gem is currently in alpha (0.1.0-alpha.1). The API may change between versions.
+This gem is currently in alpha (0.1.0-alpha.2). The API may change between versions.
 
 ## 📦 Installation
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'reactive-actions', '0.1.0-alpha.1'
+gem 'reactive-actions', '0.1.0-alpha.2'
 ```
 
 And then execute:
@@ -110,7 +110,7 @@ The generator will:
 
 ## ⚡ Rails 8 Native JavaScript Integration
 
-ReactiveActions now uses Rails 8's native JavaScript approach with **Importmap + Propshaft**, providing seamless integration without additional build steps.
+ReactiveActions uses Rails 8's native JavaScript approach with **Importmap + Propshaft**, providing seamless integration without additional build steps.
 
 ### Automatic Setup
 
@@ -145,21 +145,43 @@ The JavaScript client supports both Rails 8 (Importmap) and older setups (Sprock
 
 ## 🚀 Usage
 
+### DOM Binding (Recommended)
+
+The easiest way to use ReactiveActions is with DOM binding - no JavaScript required:
+
+```html
+<!-- Basic button click -->
+<button reactive-action="click->update_user" 
+        reactive-action-user-id="123">
+  Update User
+</button>
+
+<!-- Live search input -->
+<input reactive-action="input->search_users" 
+       reactive-action-live="true"
+       placeholder="Search...">
+
+<!-- Form submission -->
+<form reactive-action="submit->create_post">
+  <input name="title" type="text" required>
+  <button type="submit">Create Post</button>
+</form>
+
+<!-- RESTful actions with HTTP methods -->
+<button reactive-action="click->post#create_user">Create</button>
+<button reactive-action="click->put#update_user">Update</button>  
+<button reactive-action="click->delete#delete_user">Delete</button>
+```
+
 ### HTTP API
 
-Once installed, you can access the reactive actions by sending requests to your configured endpoint:
+You can also access reactive actions by sending direct HTTP requests:
 
 ```
 GET/POST/PUT/PATCH/DELETE /reactive_actions/execute
 ```
 
-Or if you used a custom mount path:
-
-```
-GET/POST/PUT/PATCH/DELETE /your-custom-path/execute
-```
-
-You can pass parameters:
+Parameters:
 - `action_name`: The name of the action to execute
 - `action_params`: Parameters for the action
 
@@ -173,151 +195,9 @@ response = Net::HTTP.post(
 )
 ```
 
-### Creating Custom Actions
+### JavaScript Client
 
-You can create custom actions by inheriting from `ReactiveActions::ReactiveAction`:
-
-```ruby
-# app/reactive_actions/update_user_action.rb
-class UpdateUserAction < ReactiveActions::ReactiveAction
-  def action
-    user = User.find(action_params[:id])
-    user.update(action_params[:user_attributes])
-    
-    @result = {
-      success: true,
-      user: user.as_json
-    }
-  end
-
-  def response
-    render json: {
-      success: true,
-      data: @result
-    }
-  end
-end
-```
-
-### Action Directory Structure
-
-Actions are placed in the `app/reactive_actions` directory structure:
-
-```
-app/
-├── reactive_actions/
-│   ├── simple_action.rb
-│   ├── user_actions/
-│   │   ├── create_user_action.rb
-│   │   ├── update_user_action.rb
-│   │   └── delete_user_action.rb
-│   └── product_actions/
-│       ├── create_product_action.rb
-│       └── update_product_action.rb
-```
-
-Actions in subdirectories are automatically loaded and namespaced under `ReactiveActions`. For example, a file at `app/reactive_actions/user_actions/create_user_action.rb` becomes accessible as `ReactiveActions::CreateUserAction`.
-
-### Action Naming Convention
-
-Action files should follow the naming convention:
-- File name: `snake_case_action.rb` (e.g., `update_user_action.rb`)
-- Class name: `CamelCaseAction` (e.g., `UpdateUserAction`)
-- HTTP parameter: `snake_case` without the `_action` suffix (e.g., `update_user`)
-
-Examples:
-- `create_user_action.rb` → `CreateUserAction` → called with `action_name: "create_user"`
-- `fetch_product_action.rb` → `FetchProductAction` → called with `action_name: "fetch_product"`
-
-### Advanced Examples
-
-#### Complex Action with Validation and Error Handling
-
-```ruby
-# app/reactive_actions/process_payment_action.rb
-class ProcessPaymentAction < ReactiveActions::ReactiveAction
-  def action
-    # Validate required parameters
-    validate_parameters!
-    
-    # Process the payment
-    payment_service = PaymentService.new(
-      amount: action_params[:amount],
-      currency: action_params[:currency],
-      payment_method: action_params[:payment_method]
-    )
-    
-    @result = payment_service.process
-    
-    # Log the transaction
-    PaymentLog.create(
-      amount: action_params[:amount],
-      status: @result[:status],
-      transaction_id: @result[:transaction_id]
-    )
-  rescue PaymentError => e
-    @error = { type: 'payment_failed', message: e.message }
-  rescue ValidationError => e
-    @error = { type: 'validation_failed', message: e.message }
-  end
-
-  def response
-    if @error
-      render json: { success: false, error: @error }, status: :unprocessable_entity
-    else
-      render json: { success: true, data: @result }
-    end
-  end
-
-  private
-
-  def validate_parameters!
-    required_params = %i[amount currency payment_method]
-    missing_params = required_params.select { |param| action_params[param].blank? }
-    
-    raise ValidationError, "Missing parameters: #{missing_params.join(', ')}" if missing_params.any?
-    raise ValidationError, "Invalid amount" unless action_params[:amount].to_f > 0
-  end
-end
-```
-
-#### Action with Background Job Integration
-
-```ruby
-# app/reactive_actions/generate_report_action.rb
-class GenerateReportAction < ReactiveActions::ReactiveAction
-  def action
-    # Queue the report generation job
-    job = ReportGenerationJob.perform_later(
-      user_id: action_params[:user_id],
-      report_type: action_params[:report_type],
-      filters: action_params[:filters] || {}
-    )
-    
-    @result = {
-      job_id: job.job_id,
-      status: 'queued',
-      estimated_completion: 5.minutes.from_now
-    }
-  end
-
-  def response
-    render json: {
-      success: true,
-      message: 'Report generation started',
-      data: @result
-    }
-  end
-end
-```
-
-## 💻 JavaScript Client
-
-ReactiveActions includes a modern JavaScript client that's automatically available after installation.
-
-### Global Usage (Recommended)
-
-After installation, `ReactiveActions` is globally available:
+For programmatic access, use the JavaScript client:
 
 ```javascript
 // Basic usage (POST method by default)
@@ -336,71 +216,527 @@ ReactiveActions.post('create_user', { name: 'New User' });
 ReactiveActions.put('update_user', { id: 1, name: 'Updated Name' });
 ReactiveActions.patch('partial_update', { id: 1, status: 'active' });
 ReactiveActions.delete('delete_user', { id: 1 });
+```
 
-// With custom options
-ReactiveActions.execute('custom_action', { data: 'value' }, {
-  method: 'POST',
-  contentType: 'application/json'
+## 📝 DOM Binding Reference
+
+### Action Syntax
+
+Use `reactive-action` with the format `event->action_name` or `event->method#action_name`:
+
+```html
+<!-- Basic actions (uses default POST method) -->
+<button reactive-action="click->update_user">Update User</button>
+<input reactive-action="change->search_users" type="text">
+<div reactive-action="hover->show_preview">Hover me</div>
+
+<!-- With HTTP methods -->
+<button reactive-action="click->put#update_user">Update User (PUT)</button>
+<button reactive-action="click->delete#delete_user">Delete User</button>
+<button reactive-action="click->get#fetch_user">Fetch User</button>
+
+<!-- Multiple actions -->
+<button reactive-action="click->post#save mouseenter->get#preview">
+  Save Item
+</button>
+```
+
+### Passing Data
+
+Use `reactive-action-*` attributes to pass data:
+
+```html
+<button reactive-action="click->update_user" 
+        reactive-action-user-id="123" 
+        reactive-action-name="John Doe">
+  Update User
+</button>
+```
+
+Data attributes are automatically converted from kebab-case to snake_case:
+- `reactive-action-user-id="123"` → `{ user_id: "123" }`
+- `reactive-action-first-name="John"` → `{ first_name: "John" }`
+
+### Supported Events
+
+- **`click`** - Mouse clicks
+- **`hover`** - Mouse hover (mouseenter)
+- **`change`** - Input value changes
+- **`input`** - Input value changes (live)
+- **`submit`** - Form submissions
+- **`focus`** - Element receives focus
+- **`blur`** - Element loses focus
+- **`mouseenter`/`mouseleave`** - Mouse interactions
+- **`keyup`/`keydown`** - Keyboard events
+
+### Loading States
+
+Elements automatically get loading states:
+
+```css
+.reactive-loading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Buttons get disabled and show loading text */
+button.reactive-loading {
+  background-color: #ccc;
+}
+```
+
+Custom loading text:
+```html
+<button reactive-action="click->slow_action" 
+        data-loading-text="Processing...">
+  Start Process
+</button>
+```
+
+### Success and Error Handling
+
+#### Custom Events
+```javascript
+// Listen for successful actions
+document.addEventListener('reactive-action:success', (event) => {
+  const { response, element, originalEvent } = event.detail;
+  console.log('Action succeeded:', response);
+});
+
+// Listen for action errors
+document.addEventListener('reactive-action:error', (event) => {
+  const { error, element, originalEvent } = event.detail;
+  console.error('Action failed:', error);
 });
 ```
 
-### ES Module Import (Advanced)
+#### Callback Functions
+```html
+<button reactive-action="click->update_user"
+        reactive-action-success="handleSuccess"
+        reactive-action-error="handleError">
+  Update User
+</button>
 
-For more control, you can import it explicitly:
+<script>
+function handleSuccess(response, element, event) {
+  alert('User updated successfully!');
+}
+
+function handleError(error, element, event) {
+  alert('Failed to update user: ' + error.message);
+}
+</script>
+```
+
+## ⚙️ Configuration
+
+ReactiveActions provides flexible initialization options:
+
+### Automatic Initialization (Default)
 
 ```javascript
-import ReactiveActions from "reactive_actions"
-
-// Use it in your module
+// Automatically set up during installation
+// Available globally as window.ReactiveActions
 ReactiveActions.execute('action_name', { param: 'value' })
 ```
 
-### Client Features
+### Manual Initialization
 
-The client automatically:
-- ✅ **Handles CSRF tokens** - Automatically includes Rails CSRF protection
-- ✅ **Formats requests** - Properly formats GET vs POST/PUT/PATCH/DELETE requests
-- ✅ **Parses responses** - Automatically parses JSON responses
-- ✅ **Returns promises** - Modern async/await compatible
-- ✅ **Error handling** - Provides structured error information
-- ✅ **Multiple HTTP methods** - Support for GET, POST, PUT, PATCH, DELETE
+```javascript
+// Import the client class
+import ReactiveActionsClient from "reactive_actions"
+
+// Create and configure instance
+const reactiveActions = new ReactiveActionsClient({
+  baseUrl: '/custom/path/execute',
+  enableAutoBinding: true,
+  enableMutationObserver: true,
+  defaultHttpMethod: 'POST'
+});
+
+// Initialize DOM bindings
+reactiveActions.initialize();
+
+// Make available globally (optional)
+window.ReactiveActions = reactiveActions;
+```
+
+### Configuration Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `baseUrl` | `'/reactive_actions/execute'` | API endpoint for action requests |
+| `enableAutoBinding` | `true` | Automatically bind elements on initialization |
+| `enableMutationObserver` | `true` | Watch for dynamically added elements |
+| `defaultHttpMethod` | `'POST'` | Default HTTP method when not specified |
+
+### Advanced Configuration Examples
+
+```javascript
+// Environment-specific configuration
+const reactiveActions = new ReactiveActionsClient({
+  baseUrl: Rails.env === 'development' ? 
+    'http://localhost:3000/reactive_actions/execute' : 
+    '/reactive_actions/execute'
+});
+
+// For SPAs with manual DOM control
+const manualReactiveActions = new ReactiveActionsClient({ 
+  enableAutoBinding: false,
+  enableMutationObserver: false 
+});
+
+// Initialize only when needed
+document.addEventListener('turbo:load', () => {
+  manualReactiveActions.initialize();
+});
+
+// Reconfigure after creation
+reactiveActions.configure({
+  defaultHttpMethod: 'PUT',
+  enableAutoBinding: false
+}).reinitialize();
+
+// Get current configuration
+console.log(reactiveActions.getConfig());
+
+// Bind specific elements manually
+reactiveActions.bindElement(document.getElementById('my-button'));
+
+// Force re-initialization
+reactiveActions.reinitialize();
+```
+
+## 🎯 Creating Custom Actions
+
+Create custom actions by inheriting from `ReactiveActions::ReactiveAction`:
+
+```ruby
+# app/reactive_actions/update_user_action.rb
+class UpdateUserAction < ReactiveActions::ReactiveAction
+  def action
+    user = User.find(action_params[:user_id])
+    user.update(name: action_params[:name])
+    
+    @result = {
+      success: true,
+      user: user.as_json(only: [:id, :name, :email])
+    }
+  end
+
+  def response
+    render json: @result
+  end
+end
+```
+
+### Action Directory Structure
+
+Actions are placed in the `app/reactive_actions` directory:
+
+```
+app/
+├── reactive_actions/
+│   ├── simple_action.rb
+│   ├── user_actions/
+│   │   ├── create_user_action.rb
+│   │   ├── update_user_action.rb
+│   │   └── delete_user_action.rb
+│   └── product_actions/
+│       ├── create_product_action.rb
+│       └── update_product_action.rb
+```
+
+### Action Naming Convention
+
+- File name: `snake_case_action.rb` (e.g., `update_user_action.rb`)
+- Class name: `CamelCaseAction` (e.g., `UpdateUserAction`)
+- HTTP parameter: `snake_case` without `_action` suffix (e.g., `update_user`)
+
+### Advanced Action Examples
+
+#### RESTful User Management
+```ruby
+# app/reactive_actions/create_user_action.rb
+class CreateUserAction < ReactiveActions::ReactiveAction
+  def action
+    user = User.create!(action_params.slice(:name, :email))
+    @result = { user: user.as_json, message: 'User created successfully' }
+  end
+
+  def response
+    render json: @result, status: :created
+  end
+end
+
+# app/reactive_actions/update_user_action.rb  
+class UpdateUserAction < ReactiveActions::ReactiveAction
+  def action
+    user = User.find(action_params[:user_id])
+    user.update!(action_params.slice(:name, :email))
+    @result = { user: user.as_json, message: 'User updated successfully' }
+  end
+
+  def response
+    render json: @result
+  end
+end
+
+# app/reactive_actions/delete_user_action.rb
+class DeleteUserAction < ReactiveActions::ReactiveAction
+  def action
+    user = User.find(action_params[:user_id])
+    user.destroy!
+    @result = { message: 'User deleted successfully' }
+  end
+
+  def response
+    render json: @result
+  end
+end
+```
+
+#### Live Search with Filtering
+```ruby
+# app/reactive_actions/search_users_action.rb
+class SearchUsersAction < ReactiveActions::ReactiveAction
+  def action
+    query = action_params[:value] || action_params[:query]
+    
+    users = User.where("name ILIKE ? OR email ILIKE ?", "%#{query}%", "%#{query}%")
+                .limit(10)
+                .select(:id, :name, :email)
+    
+    @result = {
+      users: users.as_json,
+      count: users.count,
+      query: query
+    }
+  end
+
+  def response
+    render json: @result
+  end
+end
+```
+
+#### Background Job Integration
+```ruby
+# app/reactive_actions/generate_report_action.rb
+class GenerateReportAction < ReactiveActions::ReactiveAction
+  def action
+    job = ReportGenerationJob.perform_later(
+      user_id: action_params[:user_id],
+      report_type: action_params[:report_type]
+    )
+    
+    @result = {
+      job_id: job.job_id,
+      status: 'queued',
+      estimated_completion: 5.minutes.from_now
+    }
+  end
+
+  def response
+    render json: @result, status: :accepted
+  end
+end
+```
+
+## 💻 Complete DOM Binding Examples
+
+### User Management Interface
+
+```html
+<!-- User List with Actions -->
+<div class="user-list">
+  <% @users.each do |user| %>
+    <div class="user-card" id="user-<%= user.id %>">
+      <h3><%= user.name %></h3>
+      <p><%= user.email %></p>
+      
+      <!-- Update user -->
+      <button reactive-action="click->put#update_user"
+              reactive-action-user-id="<%= user.id %>"
+              reactive-action-name="<%= user.name %>"
+              reactive-action-success="handleUserUpdate">
+        Quick Update
+      </button>
+      
+      <!-- Delete user -->
+      <button reactive-action="click->delete#delete_user"
+              reactive-action-user-id="<%= user.id %>"
+              reactive-action-success="handleUserDelete"
+              class="danger">
+        Delete
+      </button>
+      
+      <!-- Show preview on hover -->
+      <div reactive-action="mouseenter->get#show_user_preview mouseleave->post#hide_preview"
+           reactive-action-user-id="<%= user.id %>"
+           reactive-action-target="preview-<%= user.id %>">
+        <img src="<%= user.avatar %>" alt="Hover for details">
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<!-- Live Search -->
+<div class="search-container">
+  <input type="text" 
+         reactive-action="input->get#search_users"
+         reactive-action-min-length="2"
+         reactive-action-success="updateSearchResults"
+         placeholder="Search users...">
+  
+  <div id="search-results"></div>
+</div>
+
+<!-- Create User Form -->
+<form reactive-action="submit->post#create_user"
+      reactive-action-success="handleUserCreate">
+  <input name="name" type="text" placeholder="Name" required>
+  <input name="email" type="email" placeholder="Email" required>
+  <button type="submit">Create User</button>
+</form>
+
+<script>
+function handleUserUpdate(response, element, event) {
+  if (response.success) {
+    // Update the UI without page refresh
+    const userCard = element.closest('.user-card');
+    userCard.querySelector('h3').textContent = response.user.name;
+    
+    // Show success message
+    showFlash('User updated successfully!', 'success');
+  }
+}
+
+function handleUserDelete(response, element, event) {
+  if (response.success) {
+    // Remove the user card from the UI
+    const userCard = element.closest('.user-card');
+    userCard.remove();
+    
+    showFlash('User deleted successfully!', 'success');
+  }
+}
+
+function handleUserCreate(response, element, event) {
+  if (response.success) {
+    // Reset the form
+    element.reset();
+    
+    // Add new user to the list or refresh
+    location.reload(); // Or dynamically add to the list
+    
+    showFlash('User created successfully!', 'success');
+  }
+}
+
+function updateSearchResults(response, element, event) {
+  const resultsDiv = document.getElementById('search-results');
+  resultsDiv.innerHTML = response.users.map(user => 
+    `<div class="search-result">
+       <strong>${user.name}</strong> - ${user.email}
+     </div>`
+  ).join('');
+}
+
+function showFlash(message, type) {
+  // Your flash message implementation
+  console.log(`${type}: ${message}`);
+}
+</script>
+```
+
+### E-commerce Product Interactions
+
+```html
+<!-- Product Cards -->
+<div class="products-grid">
+  <% @products.each do |product| %>
+    <div class="product-card">
+      <h3><%= product.name %></h3>
+      <p class="price">$<%= product.price %></p>
+      
+      <!-- Add to cart -->
+      <button reactive-action="click->post#add_to_cart"
+              reactive-action-product-id="<%= product.id %>"
+              reactive-action-quantity="1"
+              reactive-action-success="updateCartCount">
+        Add to Cart
+      </button>
+      
+      <!-- Wishlist toggle -->
+      <button reactive-action="click->post#toggle_wishlist"
+              reactive-action-product-id="<%= product.id %>"
+              reactive-action-success="toggleWishlistUI"
+              class="<%= 'wishlisted' if current_user.wishlist.include?(product) %>">
+        ♥ Wishlist
+      </button>
+      
+      <!-- Quick view on hover -->
+      <div reactive-action="mouseenter->get#quick_view"
+           reactive-action-product-id="<%= product.id %>"
+           reactive-action-success="showQuickView">
+        <img src="<%= product.image %>" alt="<%= product.name %>">
+      </div>
+      
+      <!-- Quantity selector -->
+      <select reactive-action="change->put#update_cart_quantity"
+              reactive-action-product-id="<%= product.id %>"
+              reactive-action-success="updateCartTotal">
+        <% (1..10).each do |qty| %>
+          <option value="<%= qty %>"><%= qty %></option>
+        <% end %>
+      </select>
+    </div>
+  <% end %>
+</div>
+
+<!-- Product Filter -->
+<div class="filters">
+  <select reactive-action="change->get#filter_products"
+          reactive-action-success="updateProductGrid">
+    <option value="">All Categories</option>
+    <option value="electronics">Electronics</option>
+    <option value="clothing">Clothing</option>
+    <option value="books">Books</option>
+  </select>
+  
+  <input type="range" 
+         reactive-action="input->get#filter_by_price"
+         reactive-action-success="updateProductGrid"
+         min="0" max="1000" step="10">
+</div>
+```
 
 ## Security
 
-ReactiveActions implements several security measures to protect your application:
+ReactiveActions implements several security measures:
 
-### 🔒 **Built-in Security Features**
+### 🔒 Built-in Security Features
 
-#### Parameter Sanitization
-- **Input validation**: Action names are validated against safe patterns (`/\A[a-zA-Z_][a-zA-Z0-9_]*\z/`)
-- **Parameter key sanitization**: Only alphanumeric characters, underscores, and hyphens allowed
-- **String length limits**: Prevents memory exhaustion attacks (max 10,000 chars)
-- **Dangerous prefix filtering**: Blocks parameters starting with `__`, `eval`, `exec`, `system`, etc.
+- **Parameter sanitization** - Input validation and safe patterns
+- **CSRF protection** - Automatic Rails CSRF token handling
+- **Code injection prevention** - Sanitized class names and parameters
+- **Length limits** - Prevents memory exhaustion attacks
 
-#### CSRF Protection
-- **Automatic CSRF tokens**: JavaScript client automatically includes Rails CSRF tokens
-- **Same-origin requests**: Credentials are sent only to same-origin requests
-- **Controller integration**: Inherits from `ActionController::Base` with CSRF protection
-
-#### Code Injection Prevention
-- **Class name validation**: Action names are sanitized before constant lookup
-- **Namespace isolation**: Actions are properly namespaced to prevent conflicts
-- **Parameter filtering**: Recursive parameter sanitization for nested structures
-
-### 🛡️ **Security Best Practices**
+### 🛡️ Security Best Practices
 
 ```ruby
-# app/reactive_actions/secure_action.rb
+# Always validate user permissions
 class SecureAction < ReactiveActions::ReactiveAction
   def action
-    # Always validate user permissions
     raise ReactiveActions::UnauthorizedError unless current_user&.admin?
     
     # Validate and sanitize inputs
     user_id = action_params[:user_id].to_i
-    raise ReactiveActions::InvalidParametersError, "Invalid user ID" if user_id <= 0
+    raise ReactiveActions::InvalidParametersError if user_id <= 0
     
-    # Use strong parameters if integrating with models
+    # Use strong parameters
     permitted_params = action_params.slice(:name, :email).permit!
     
     @result = User.find(user_id).update(permitted_params)
@@ -408,130 +744,9 @@ class SecureAction < ReactiveActions::ReactiveAction
 end
 ```
 
-### ⚠️ **Security Considerations**
-
-- **Always validate user permissions** in your actions
-- **Use Rails strong parameters** when working with model updates
-- **Sanitize file uploads** if handling file parameters
-- **Implement rate limiting** for public-facing actions
-- **Log security events** for audit trails
-
-## Performance
-
-### 🚀 **Performance Characteristics**
-
-ReactiveActions is designed to be lightweight and efficient:
-
-- **Minimal overhead**: Direct controller execution without complex middleware chains
-- **No database dependencies**: Core functionality doesn't require database connections
-- **Efficient autoloading**: Actions are loaded on-demand using Rails' autoloading
-- **Memory efficient**: Parameter sanitization prevents memory exhaustion attacks
-
-### 📊 **Performance Best Practices**
-
-#### Action Design
-```ruby
-# ✅ Good: Lightweight action with focused responsibility
-class QuickUpdateAction < ReactiveActions::ReactiveAction
-  def action
-    User.where(id: action_params[:id]).update_all(
-      last_seen_at: Time.current
-    )
-  end
-end
-
-# ❌ Avoid: Heavy operations that should be background jobs
-class SlowReportAction < ReactiveActions::ReactiveAction
-  def action
-    # This should be a background job instead
-    @result = generate_complex_report_synchronously
-  end
-end
-```
-
-#### Use Background Jobs for Heavy Operations
-```ruby
-# ✅ Better approach for time-consuming operations
-class InitiateReportAction < ReactiveActions::ReactiveAction
-  def action
-    ReportGenerationJob.perform_later(action_params)
-    @result = { status: 'queued', job_id: SecureRandom.uuid }
-  end
-end
-```
-
-#### Optimize Database Queries
-```ruby
-class OptimizedAction < ReactiveActions::ReactiveAction
-  def action
-    # Use includes to avoid N+1 queries
-    @users = User.includes(:profile, :posts)
-                 .where(id: action_params[:user_ids])
-    
-    # Use select to limit returned columns
-    @summary = User.select(:id, :name, :created_at)
-                   .where(active: true)
-  end
-end
-```
-
-### 📈 **Monitoring and Optimization**
-
-- **Monitor response times**: Actions should typically complete in < 100ms
-- **Use Rails logging**: ReactiveActions logs execution details at debug level
-- **Profile memory usage**: Large parameter sets can impact memory
-- **Consider caching**: Use Rails caching for frequently accessed data
-
-## ⚙️ Configuration
-
-The gem can be configured using an initializer (automatically created by the install generator):
-
-```ruby
-# config/initializers/reactive_actions.rb
-ReactiveActions.configure do |config|
-  # Configure methods to delegate from the controller to action classes
-  config.delegated_controller_methods += [:custom_method]
-
-  # Configure instance variables to delegate from the controller to action classes
-  config.delegated_instance_variables += [:custom_variable]
-end
-
-# Set the logger for ReactiveActions
-ReactiveActions.logger = Rails.logger
-```
-
-### Advanced Configuration
-
-During installation, you can choose to configure advanced options:
-
-- **Custom Controller Methods**: Add additional controller methods to delegate to action classes
-- **Logging Level**: Set a custom logging level for ReactiveActions
-- **Instance Variables**: Configure which instance variables to delegate from controllers to actions
-
-### Default Delegated Methods
-
-By default, the following controller methods are available in your actions:
-- `render`
-- `redirect_to`
-- `head`
-- `params`
-- `session`
-- `cookies`
-- `flash`
-- `request`
-- `response`
-
 ## ❌ Error Handling
 
-ReactiveActions provides structured error handling with specific error types:
-
-- `ActionNotFoundError`: When the requested action doesn't exist
-- `MissingParameterError`: When required parameters are missing
-- `InvalidParametersError`: When parameters have invalid types or formats
-- `UnauthorizedError`: When the user lacks permission for the action
-- `ActionExecutionError`: When an error occurs during action execution
-
-All errors return JSON responses with consistent structure:
+ReactiveActions provides structured error handling:
 
 ```json
 {
@@ -544,166 +759,51 @@ All errors return JSON responses with consistent structure:
 }
 ```
 
-## 🔧 Troubleshooting
-
-### Common Issues and Solutions
-
-#### ❓ **Action Not Found Errors**
-
-**Problem**: Getting `ActionNotFoundError` for existing actions
-
-**Solutions**:
-```bash
-# 1. Check file naming convention
-# File: app/reactive_actions/my_action.rb
-# Class: MyAction
-# Call with: action_name: "my"
-
-# 2. Restart Rails to reload autoloading
-rails restart
-
-# 3. Check for syntax errors in action file
-rails console
-> MyAction # Should load without errors
-```
-
-#### ❓ **JavaScript Client Not Working**
-
-**Problem**: `ReactiveActions is not defined` in browser
-
-**Solutions**:
-```javascript
-// 1. Check importmap.rb includes the pin
-// config/importmap.rb should have:
-pin "reactive_actions", to: "reactive_actions.js"
-
-// 2. Check application.js imports it
-// app/javascript/application.js should have:
-import "reactive_actions"
-
-// 3. Clear browser cache and restart Rails
-```
-
-#### ❓ **CSRF Token Errors**
-
-**Problem**: Getting `Can't verify CSRF token authenticity`
-
-**Solutions**:
-```erb
-<!-- 1. Ensure CSRF meta tags are in your layout -->
-<%= csrf_meta_tags %>
-
-<!-- 2. Check that protect_from_forgery is enabled -->
-<%# In your ApplicationController %>
-protect_from_forgery with: :exception
-```
-
-#### ❓ **Parameter Sanitization Issues**
-
-**Problem**: Parameters are being rejected or modified unexpectedly
-
-**Solutions**:
-```ruby
-# 1. Check parameter key format (alphanumeric, underscore, hyphen only)
-# ✅ Good: { user_name: "John", user-id: 123 }
-# ❌ Bad: { "__eval": "code", "system()": "bad" }
-
-# 2. Check string length limits (max 10,000 characters)
-# 3. Review logs for specific sanitization messages
-```
-
-#### ❓ **Performance Issues**
-
-**Problem**: Actions are slow or timing out
-
-**Solutions**:
-```ruby
-# 1. Move heavy operations to background jobs
-class SlowAction < ReactiveActions::ReactiveAction
-  def action
-    # Instead of this:
-    # heavy_operation
-    
-    # Do this:
-    HeavyOperationJob.perform_later(action_params)
-    @result = { status: 'queued' }
-  end
-end
-
-# 2. Optimize database queries
-# 3. Add caching where appropriate
-# 4. Monitor with Rails logs at debug level
-```
-
-### Debug Mode
-
-Enable detailed logging for troubleshooting:
-
-```ruby
-# config/initializers/reactive_actions.rb
-ReactiveActions.logger.level = :debug
-
-# This will log:
-# - Action execution details
-# - Parameter sanitization steps
-# - Error stack traces
-# - Performance metrics
-```
+**Error Types:**
+- `ActionNotFoundError` - Action doesn't exist
+- `MissingParameterError` - Required parameters missing
+- `InvalidParametersError` - Invalid parameter format
+- `UnauthorizedError` - Permission denied
+- `ActionExecutionError` - Runtime execution error
 
 ## 🚄 Rails 8 Compatibility
 
-This gem is designed specifically for Rails 8 and takes advantage of:
-
-- ✅ **Propshaft** - Modern asset pipeline without compilation
-- ✅ **Importmap** - Native ES module support without bundling
-- ✅ **Rails 8 conventions** - Follows current Rails best practices
-- ✅ **Modern JavaScript** - ES6+ classes and async/await
-- ✅ **Backward compatibility** - Still works with Sprockets if needed
+Designed specifically for Rails 8:
+- ✅ **Propshaft** - Modern asset pipeline
+- ✅ **Importmap** - Native ES modules
+- ✅ **Rails 8 conventions** - Current best practices
+- ✅ **Modern JavaScript** - ES6+ features
+- ✅ **Backward compatibility** - Works with Sprockets
 
 ## 🗺️ Roadmap & Future Improvements
 
-Planned improvements for ReactiveActions:
-
-* Security hooks - methods that run before actions for authentication and authorization checks
-* Rate limiting and throttling capabilities
-* Enhanced error handling with more granular error types
-* Action composition - ability to build complex workflows from smaller actions
-* Improved generators for common action patterns
-* Built-in testing utilities and helpers
-* Auto-generated API documentation
-* And much more
+Planned features:
+- Security hooks for authentication/authorization
+- Rate limiting and throttling
+- Enhanced error handling
+- Action composition for complex workflows
+- Built-in testing utilities
+- Auto-generated API documentation
 
 ## 🛠️ Development
 
-After checking out the repo, run the following to install dependencies:
+After checking out the repo:
 
 ```bash
 $ bundle install
-```
-
-Then, run the tests:
-
-```bash
-$ bundle exec rspec
-```
-
-You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run:
-
-```bash
-$ bundle exec rake install
+$ bundle exec rspec  # Run tests
+$ bin/console        # Interactive prompt
 ```
 
 ## 🧪 Testing
 
-The gem repository includes a dummy Rails application for development and testing purposes. To run the tests:
+Run the test suite:
 
 ```bash
 $ bundle exec rspec
 ```
 
-**Note**: The dummy application is only available in the source repository and is not included in the distributed gem.
+**Note**: The dummy application is only available in the source repository.
 
 ## 🤝 Contributing
 

@@ -1,0 +1,146 @@
+<div style="margin-bottom: 30px;">
+  <h2>DOM Binding Testing</h2>
+  <p style="color: #6c757d; margin-bottom: 20px;">
+    Test the automatic DOM binding features using data attributes. The client will automatically bind to elements with <code>reactive-action</code> attributes.
+  </p>
+
+  <!-- Basic Button Tests -->
+  <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3>Basic Button Actions</h3>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+      <button 
+        reactive-action="click->test"
+        reactive-action-name="Button Test"
+        reactive-action-source="button"
+        style="background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;"
+        data-loading-text="Testing..."
+      >
+        Test Action (Click)
+      </button>
+      
+      <button 
+        reactive-action="click->post#example"
+        reactive-action-name="Example User"
+        reactive-action-method="POST"
+        style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;"
+        data-loading-text="Posting..."
+      >
+        Example Action (POST)
+      </button>
+      
+      <button 
+        reactive-action="click->get#sub_folder"
+        reactive-action-source="dom_test"
+        style="background: #6f42c1; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;"
+        data-loading-text="Getting..."
+      >
+        Sub Folder (GET)
+      </button>
+    </div>
+  </div>
+
+  <!-- Form Test -->
+  <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3>Form Submission</h3>
+    <form 
+      reactive-action="submit->post#test"
+      reactive-action-form-type="user_form"
+      style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: end;"
+    >
+      <div>
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Name:</label>
+        <input 
+          type="text" 
+          name="name" 
+          value="Form Test User"
+          style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+        />
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Email:</label>
+        <input 
+          type="email" 
+          name="email" 
+          value="test@example.com"
+          style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+        />
+      </div>
+      <button 
+        type="submit"
+        data-loading-text="Submitting..."
+        style="background: #fd7e14; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; grid-column: span 2;"
+      >
+        Submit Form
+      </button>
+    </form>
+  </div>
+
+  <!-- Input Change Test -->
+  <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3>Input Change Events</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+      <div>
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Text Input (on change):</label>
+        <input 
+          type="text" 
+          reactive-action="change->patch#test"
+          reactive-action-input-type="text_change"
+          placeholder="Type and tab out..."
+          style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+        />
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Select (on change):</label>
+        <select 
+          reactive-action="change->put#test"
+          reactive-action-input-type="select_change"
+          style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+        >
+          <option value="option1">Option 1 (Turbo)</option>
+          <option value="option2">Option 2 (Turbo)</option>
+          <option value="option3">Option 3 (Turbo)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic Content Test -->
+  <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3>Dynamic Content (Mutation Observer)</h3>
+    <button onclick="ReactiveActionsDomTesting.addDynamicButton()" style="background: #17a2b8; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px;">
+      Add Dynamic Button
+    </button>
+    <div id="dynamicContainer" style="min-height: 50px; border: 2px dashed #dee2e6; padding: 15px; border-radius: 4px;">
+      <em>Dynamic buttons will appear here...</em>
+    </div>
+  </div>
+
+  <!-- Turbo-specific Test -->
+  <div style="background: #e7f3ff; border: 1px solid #b8daff; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3>Turbo Integration Test</h3>
+    <p style="margin-bottom: 15px; color: #004085;">
+      This content was loaded via Turbo Frame. Test that DOM bindings work correctly:
+    </p>
+    <button 
+      reactive-action="click->test"
+      reactive-action-turbo-test="true"
+      reactive-action-timestamp="<%= Time.current.to_i %>"
+      style="background: #0d6efd; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;"
+      data-loading-text="Processing..."
+    >
+      Turbo-Loaded Button
+    </button>
+  </div>
+</div>
+
+<div>
+  <h2>DOM Events Log</h2>
+  <pre id="domResult" style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 4px; overflow-x: auto; overflow-y: auto; min-height: 150px; max-height: 500px; white-space: pre-wrap; word-wrap: break-word;">
+DOM binding events will appear here...
+  </pre>
+  <button onclick="ReactiveActionsDomTesting.clearDomLog()" style="background: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;">
+    Clear Log
+  </button>
+</div>
+
+<%= javascript_include_tag 'dom_testing' %>

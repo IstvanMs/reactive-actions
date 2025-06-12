@@ -2,31 +2,107 @@
 
 ReactiveActions has been installed successfully!
 
-Routes have been added to your config/routes.rb file:
+SETUP COMPLETED:
+================
+
+✓ Routes added to config/routes.rb:
   mount ReactiveActions::Engine, at: '/reactive_actions'
 
-You can now access the reactive actions functionality at:
-  http://localhost:3000/reactive_actions/execute
+✓ JavaScript client configured with automatic initialization
+  - Added to config/importmap.rb
+  - Initialized in app/javascript/application.js
+  - Available globally as window.ReactiveActions
 
-A sample action has been created at:
+✓ Sample action created:
   app/reactive_actions/example_action.rb
 
-You can try it out with:
-  
-  # Using HTTP
-  curl -X POST http://localhost:3000/reactive_actions/execute \
-    -H "Content-Type: application/json" \
-    -d '{"action_name": "example", "action_params": {"name": "YourName"}}'
-  
-  # Using JavaScript client
-  ReactiveActions.execute('example', { name: 'YourName' })
-    .then(response => console.log(response))
+QUICK START:
+============
 
-To create your own actions, add more files to the app/reactive_actions directory.
-Each action should inherit from ReactiveActions::ReactiveAction and define
-at least the `action` and `response` methods.
+1. Test the API endpoint:
+   curl -X POST http://localhost:3000/reactive_actions/execute \
+     -H "Content-Type: application/json" \
+     -d '{"action_name": "example", "action_params": {"name": "YourName"}}'
 
-For more information, see the documentation at:
+2. Use JavaScript client:
+   ReactiveActions.execute('example', { name: 'YourName' })
+     .then(response => console.log(response))
+
+3. Use DOM binding (no JavaScript required):
+   <button reactive-action="click->example" 
+           reactive-action-name="YourName">
+     Test Action
+   </button>
+
+JAVASCRIPT CLIENT:
+==================
+
+The ReactiveActions client is automatically initialized and available as:
+- window.ReactiveActions (global)
+- Supports all HTTP methods: get, post, put, patch, delete
+- Automatic CSRF token handling
+- DOM binding with mutation observer
+
+Examples:
+  // Execute actions
+  ReactiveActions.execute('action_name', { param: 'value' })
+  ReactiveActions.post('create_user', { name: 'John' })
+  ReactiveActions.get('fetch_data', { id: 123 })
+
+  // Configuration (if needed)
+  ReactiveActions.configure({
+    baseUrl: '/custom/path/execute',
+    defaultHttpMethod: 'PUT'
+  }).reinitialize()
+
+DOM BINDING:
+============
+
+Add reactive-action attributes to any element:
+
+  <!-- Basic actions -->
+  <button reactive-action="click->update_user">Update</button>
+  <input reactive-action="change->search" type="text">
+  <form reactive-action="submit->create_post">...</form>
+
+  <!-- With HTTP methods -->
+  <button reactive-action="click->put#update_user">Update (PUT)</button>
+  <button reactive-action="click->delete#remove_user">Delete</button>
+
+  <!-- Pass data via attributes -->
+  <button reactive-action="click->update_user"
+          reactive-action-user-id="123"
+          reactive-action-name="John">
+    Update User
+  </button>
+
+CREATING ACTIONS:
+=================
+
+Add files to app/reactive_actions/:
+
+  # app/reactive_actions/update_user_action.rb
+  class UpdateUserAction < ReactiveActions::ReactiveAction
+    def action
+      user = User.find(action_params[:user_id])
+      user.update(name: action_params[:name])
+      @result = { success: true, user: user.as_json }
+    end
+
+    def response
+      render json: @result
+    end
+  end
+
+DOCUMENTATION & SUPPORT:
+========================
+
+For complete documentation and examples:
   https://github.com/IstvanMs/reactive-actions
+
+For troubleshooting and configuration options:
+  Check config/initializers/reactive_actions.rb
+
+Happy coding with ReactiveActions! 🚀
 
 ===============================================================================

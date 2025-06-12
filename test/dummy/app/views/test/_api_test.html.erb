@@ -1,0 +1,53 @@
+<div style="margin-bottom: 30px;">
+  <h2>API Testing</h2>
+  <p style="color: #6c757d; margin-bottom: 20px;">
+    Test the ReactiveActions JavaScript client API methods directly.
+  </p>
+  <div style="margin-bottom: 15px;">
+    <label for="httpMethod" style="display: block; margin-bottom: 5px; font-weight: bold;">HTTP Method:</label>
+    <select
+      id="httpMethod"
+      style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+    >
+      <option value="post">POST (default)</option>
+      <option value="get">GET</option>
+      <option value="put">PUT</option>
+      <option value="patch">PATCH</option>
+      <option value="delete">DELETE</option>
+    </select>
+  </div>
+  <div style="margin-bottom: 15px;">
+    <label for="actionName" style="display: block; margin-bottom: 5px; font-weight: bold;">Action Name:</label>
+    <input
+      type="text"
+      id="actionName"
+      placeholder="e.g. test, example, sub_folder"
+      style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+      value="test"
+    />
+  </div>
+  <div style="margin-bottom: 15px;">
+    <label for="actionData" style="display: block; margin-bottom: 5px; font-weight: bold;">Action Data (JSON):</label>
+    <textarea
+      id="actionData"
+      placeholder='{"name": "Test User", "id": 123}'
+      style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; min-height: 80px; font-family: monospace;"
+    >{"name": "API Test User"}</textarea>
+  </div>
+  <div style="margin-bottom: 15px;">
+    <button onclick="ReactiveActionsApiTesting.executeAction()" style="background: #007cba; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
+      Execute Action
+    </button>
+  </div>
+</div>
+<div>
+  <h2>API Response</h2>
+  <pre id="result" style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 4px; overflow-x: auto; min-height: 100px;">
+Click "Execute Action" to test ReactiveActions API...
+  </pre>
+  <button onclick="ReactiveActionsApiTesting.clearApiLog()" style="background: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;">
+    Clear Response
+  </button>
+</div>
+
+<%= javascript_include_tag 'api_testing' %>

@@ -8,3 +8,21 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+
+.tab-button.active {
+  border-bottom-color: #007cba !important;
+  color: #007cba !important;
+}
+
+.tab-button:hover {
+  background-color: #f8f9fa;
+}
+
+.reactive-loading {
+  opacity: 0.6;
+  cursor: wait !important;
+}
+
+.reactive-loading button {
+  pointer-events: none;
+}

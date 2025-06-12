@@ -1,0 +1,30 @@
+<div style="margin-bottom: 30px;">
+  <h2>Manual Console Testing</h2>
+  <p style="color: #6c757d; margin-bottom: 20px;">You can test manually in the browser console:</p>
+  <pre style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;">
+    // Check if ReactiveActionsClient class is available
+    console.log(ReactiveActionsClient);
+
+    // Create and initialize an instance
+    const reactiveActions = new ReactiveActionsClient();
+    reactiveActions.initialize();
+
+    // Test an action
+    reactiveActions.execute('test', {name: 'Manual Test'})
+      .then(response => console.log(response));
+
+    // Create with configuration
+    const customReactiveActions = new ReactiveActionsClient({
+      baseUrl: '/custom/path',
+      defaultHttpMethod: 'GET'
+    });
+    customReactiveActions.initialize();
+
+    // Or configure after creation
+    const anotherInstance = new ReactiveActionsClient();
+    anotherInstance.configure({
+      enableAutoBinding: false,
+      defaultHttpMethod: 'PUT'
+    }).initialize();
+  </pre>
+</div>

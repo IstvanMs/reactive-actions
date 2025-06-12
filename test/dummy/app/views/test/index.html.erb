@@ -1,0 +1,97 @@
+<div style="max-width: 1000px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+    <div style="display: flex; align-items: center;">
+      <h1 style="margin: 0; margin-right: 15px;">ReactiveActions Test Suite</h1>
+      <div id="statusIndicator" style="padding: 8px 12px; border-radius: 20px; font-size: 14px; font-weight: bold;">
+        Loading...
+      </div>
+    </div>
+  </div>
+
+  <!-- Configuration Section -->
+  <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h3 style="margin-top: 0;">Client Configuration</h3>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+      <div>
+        <label for="baseUrl" style="display: block; margin-bottom: 5px; font-weight: bold;">Base URL:</label>
+        <input 
+          type="text" 
+          id="baseUrl" 
+          value="/reactive_actions/execute"
+          style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+        />
+      </div>
+      
+      <div>
+        <label for="defaultMethod" style="display: block; margin-bottom: 5px; font-weight: bold;">Default HTTP Method:</label>
+        <select 
+          id="defaultMethod" 
+          style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+        >
+          <option value="POST">POST</option>
+          <option value="GET">GET</option>
+          <option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="font-weight: bold;">Options:</label>
+        <label style="font-size: 14px;">
+          <input type="checkbox" id="enableAutoBinding" checked> Enable Auto Binding
+        </label>
+        <label style="font-size: 14px;">
+          <input type="checkbox" id="enableMutationObserver" checked> Enable Mutation Observer
+        </label>
+      </div>
+    </div>
+    
+    <button onclick="initializeClient(this)" style="background: #007cba; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">
+      Initialize Client
+    </button>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div style="border-bottom: 2px solid #dee2e6; margin-bottom: 20px;">
+    <nav style="display: flex; gap: 0;">
+      <%= link_to "API Testing", 
+          test_api_path, 
+          id: "tab-api",
+          class: "tab-button active",
+          style: "padding: 12px 24px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; text-decoration: none; color: inherit;",
+          onclick: "active_tab(this)",
+          data: { 
+            turbo: true,
+            turbo_stream: true
+          } %>
+      <%= link_to "DOM Binding Testing", 
+          test_dom_path, 
+          id: "tab-dom",
+          class: "tab-button",
+          style: "padding: 12px 24px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; text-decoration: none; color: inherit;",
+          onclick: "active_tab(this)",
+          data: { 
+            turbo: true,
+            turbo_stream: true
+          } %>
+      <%= link_to "Manual Testing", 
+          test_manual_path, 
+          id: "tab-manual",
+          class: "tab-button",
+          style: "padding: 12px 24px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; text-decoration: none; color: inherit;",
+          onclick: "active_tab(this)",
+          data: { 
+            turbo: true,
+            turbo_stream: true
+          } %>
+    </nav>
+  </div>
+
+  <div id="test_content">
+    <%= render 'api_test' %>
+  </div>
+</div>
+
+<%= javascript_include_tag 'tester' %>

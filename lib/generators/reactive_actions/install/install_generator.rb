@@ -20,6 +20,14 @@ module ReactiveActions
                                   desc: 'Skip generating example action'
       class_option :mount_path, type: :string, default: '/reactive_actions',
                                 desc: 'Custom mount path for ReactiveActions'
+      class_option :auto_initialize, type: :boolean, default: true,
+                                     desc: 'Auto-initialize ReactiveActions client on page load'
+      class_option :enable_dom_binding, type: :boolean, default: true,
+                                        desc: 'Enable automatic DOM binding'
+      class_option :enable_mutation_observer, type: :boolean, default: true,
+                                              desc: 'Enable mutation observer for dynamic content'
+      class_option :default_http_method, type: :string, default: 'POST',
+                                         desc: 'Default HTTP method for actions'
       class_option :quiet, type: :boolean, default: false,
                            desc: 'Run with minimal output'
 
@@ -67,10 +75,18 @@ module ReactiveActions
 
         if options[:quiet] || yes?('Add ReactiveActions JavaScript client?', :green)
           add_javascript_to_importmap
-          say '✓ Added JavaScript client to importmap', :green unless options[:quiet]
+          add_javascript_initialization
+          say '✓ Added JavaScript client with initialization', :green unless options[:quiet]
         else
           say '✗ Skipped JavaScript configuration', :yellow
         end
+      end
+
+      def javascript_configuration_options
+        return if options[:skip_javascript] || options[:quiet]
+        return unless javascript_needed?
+
+        configure_javascript_options
       end
 
       def configuration_options
@@ -164,12 +180,9 @@ module ReactiveActions
         IMPORTMAP
 
         append_to_file 'config/importmap.rb', importmap_content
-
-        # Add the import to application.js to ensure it executes
-        add_import_to_application_js
       end
 
-      def add_import_to_application_js
+      def add_javascript_initialization
         app_js_paths = %w[
           app/javascript/application.js
           app/assets/javascripts/application.js
@@ -179,21 +192,104 @@ module ReactiveActions
         app_js_path = app_js_paths.find { |path| File.exist?(path) }
 
         if app_js_path
-          # Check if import already exists
+          # Check if ReactiveActions is already configured
           app_js_content = File.read(app_js_path)
-          return if app_js_content.include?('import "reactive_actions"')
+          return if app_js_content.include?('ReactiveActions') || app_js_content.include?('reactive_actions')
 
-          import_line = <<~JAVASCRIPT
+          # Generate JavaScript initialization code
+          js_config = generate_javascript_config
 
-            // Import ReactiveActions to make it globally available
-            import "reactive_actions"
+          js_code = <<~JAVASCRIPT
+
+            // Import and initialize ReactiveActions
+            import ReactiveActionsClient from "reactive_actions"
+
+            // Create and configure ReactiveActions instance
+            const reactiveActions = new ReactiveActionsClient(#{js_config});
+
+            #{generate_initialization_code}
+
+            // Make ReactiveActions globally available
+            window.ReactiveActions = reactiveActions;
           JAVASCRIPT
 
-          append_to_file app_js_path, import_line
-          say "✓ Added ReactiveActions import to #{app_js_path}", :green unless options[:quiet]
+          append_to_file app_js_path, js_code
+          say "✓ Added ReactiveActions initialization to #{app_js_path}", :green unless options[:quiet]
         else
-          say '⚠ Could not find application.js file. Please manually add: import "reactive_actions"', :yellow
+          say '⚠ Could not find application.js file. Please manually add ReactiveActions initialization.', :yellow
         end
+      end
+
+      def generate_javascript_config
+        config = {}
+
+        # Add mount path if different from default
+        mount_path = determine_mount_path || options[:mount_path]
+        config[:baseUrl] = "#{mount_path}/execute" if mount_path != '/reactive_actions'
+
+        # Add configuration options
+        config[:enableAutoBinding] = javascript_option_value(:enable_dom_binding)
+        config[:enableMutationObserver] = javascript_option_value(:enable_mutation_observer)
+        config[:defaultHttpMethod] = javascript_option_value(:default_http_method, 'POST')
+
+        # Remove default values to keep config clean
+        config.delete(:enableAutoBinding) if config[:enableAutoBinding] == true
+        config.delete(:enableMutationObserver) if config[:enableMutationObserver] == true
+        config.delete(:defaultHttpMethod) if config[:defaultHttpMethod] == 'POST'
+
+        config.empty? ? '{}' : JSON.pretty_generate(config)
+      end
+
+      def generate_initialization_code
+        if javascript_option_value(:auto_initialize)
+          <<~JAVASCRIPT.strip
+            // Initialize on DOM content loaded and Turbo events
+            document.addEventListener('DOMContentLoaded', () => reactiveActions.initialize());
+            document.addEventListener('turbo:load', () => reactiveActions.initialize());
+            document.addEventListener('turbo:frame-load', () => reactiveActions.initialize());
+          JAVASCRIPT
+        else
+          <<~JAVASCRIPT.strip
+            // Manual initialization - call reactiveActions.initialize() when ready
+            // Example: reactiveActions.initialize();
+          JAVASCRIPT
+        end
+      end
+
+      def javascript_option_value(option_key, default_value = nil)
+        return options[option_key] if options.key?(option_key)
+        return default_value unless default_value.nil?
+
+        case option_key
+        when :enable_dom_binding, :enable_mutation_observer, :auto_initialize
+          true
+        when :default_http_method
+          'POST'
+        end
+      end
+
+      def configure_javascript_options
+        return unless yes?('Configure JavaScript client options?', :green)
+
+        # Auto-initialize option
+        auto_init = yes?('Auto-initialize ReactiveActions on page load? (recommended)', :green)
+        @javascript_options ||= {}
+        @javascript_options[:auto_initialize] = auto_init
+
+        # DOM binding option
+        enable_dom = yes?('Enable automatic DOM binding? (recommended)', :green)
+        @javascript_options[:enable_dom_binding] = enable_dom
+
+        # Mutation observer option
+        if enable_dom
+          enable_observer = yes?('Enable mutation observer for dynamic content? (recommended)', :green)
+          @javascript_options[:enable_mutation_observer] = enable_observer
+        end
+
+        # Default HTTP method
+        http_methods = %w[POST GET PUT PATCH DELETE]
+        default_method = ask('Default HTTP method:', limited_to: http_methods, default: 'POST')
+        @javascript_options[:default_http_method] = default_method unless default_method == 'POST'
       end
 
       def add_to_sprockets_manifest

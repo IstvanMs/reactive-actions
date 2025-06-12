@@ -11,17 +11,3 @@ end
 
 # Set the logger for ReactiveActions
 ReactiveActions.logger = Rails.logger
-
-# JavaScript Client Configuration
-# ================================
-# The JavaScript client is automatically initialized in application.js
-# You can reconfigure it at runtime if needed:
-#
-# ReactiveActions.configure({
-#   baseUrl: '/custom/path/execute',
-#   enableAutoBinding: true,
-#   enableMutationObserver: true,
-#   defaultHttpMethod: 'POST'
-# }).reinitialize();
-#
-# Available globally as window.ReactiveActions
