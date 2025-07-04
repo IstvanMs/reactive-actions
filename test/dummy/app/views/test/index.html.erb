@@ -57,35 +57,55 @@
   <div style="border-bottom: 2px solid #dee2e6; margin-bottom: 20px;">
     <nav style="display: flex; gap: 0;">
       <%= link_to "API Testing", 
-          test_api_path, 
-          id: "tab-api",
-          class: "tab-button active",
-          style: "padding: 12px 24px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; text-decoration: none; color: inherit;",
-          onclick: "active_tab(this)",
-          data: { 
-            turbo: true,
-            turbo_stream: true
-          } %>
+        test_api_path, 
+        id: "tab-api",
+        class: "tab-button active",
+        style: "padding: 12px 24px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; text-decoration: none; color: inherit;",
+        onclick: "active_tab(this)",
+        data: { 
+          turbo: true,
+          turbo_stream: true
+        } %>
       <%= link_to "DOM Binding Testing", 
-          test_dom_path, 
-          id: "tab-dom",
-          class: "tab-button",
-          style: "padding: 12px 24px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; text-decoration: none; color: inherit;",
-          onclick: "active_tab(this)",
-          data: { 
-            turbo: true,
-            turbo_stream: true
-          } %>
+        test_dom_path, 
+        id: "tab-dom",
+        class: "tab-button",
+        style: "padding: 12px 24px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; text-decoration: none; color: inherit;",
+        onclick: "active_tab(this)",
+        data: { 
+          turbo: true,
+          turbo_stream: true
+        } %>
+      <%= link_to "Security Testing", 
+        test_security_path, 
+        id: "tab-security",
+        class: "tab-button",
+        style: "padding: 12px 24px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; text-decoration: none; color: inherit;",
+        onclick: "active_tab(this)",
+        data: { 
+          turbo: true,
+          turbo_stream: true
+        } %>
+      <%= link_to "Rate Limiting", 
+        test_rate_limit_path, 
+        id: "tab-rate-limit",
+        class: "tab-button",
+        style: "padding: 12px 24px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; text-decoration: none; color: inherit;",
+        onclick: "active_tab(this)",
+        data: { 
+          turbo: true,
+          turbo_stream: true
+        } %>
       <%= link_to "Manual Testing", 
-          test_manual_path, 
-          id: "tab-manual",
-          class: "tab-button",
-          style: "padding: 12px 24px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; text-decoration: none; color: inherit;",
-          onclick: "active_tab(this)",
-          data: { 
-            turbo: true,
-            turbo_stream: true
-          } %>
+        test_manual_path, 
+        id: "tab-manual",
+        class: "tab-button",
+        style: "padding: 12px 24px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; text-decoration: none; color: inherit;",
+        onclick: "active_tab(this)",
+        data: { 
+          turbo: true,
+          turbo_stream: true
+        } %>
     </nav>
   </div>
 

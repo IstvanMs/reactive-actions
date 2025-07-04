@@ -14,6 +14,7 @@ AllCops:
     - 'node_modules/**/*'
     - 'test/dummy/**/*'
     - 'db/schema.rb'
+    - 'lib/generators/**/templates/**/*'
 
 Naming/FileName:
   Exclude:
@@ -36,13 +37,13 @@ Metrics/BlockLength:
     - 'lib/tasks/**/*.rake'
 
 Metrics/ModuleLength:
-  Max: 100
+  Max: 150
   # Exclude spec files from module length checks
   Exclude:
     - 'spec/**/*'
 
 Metrics/ClassLength:
-  Max: 300
+  Max: 320
 
 Metrics/MethodLength:
   Max: 25
@@ -55,13 +56,13 @@ RSpec/DescribeClass:
   Enabled: true
 
 RSpec/ExampleLength:
-  Max: 15
-  Exclude:
-    - 'spec/system/**/*'
-    - 'spec/requests/**/*'
+  Max: 25
 
 RSpec/MultipleExpectations:
   Max: 5
 
 RSpec/NestedGroups:
   Max: 4
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 7

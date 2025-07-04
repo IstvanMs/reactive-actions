@@ -31,6 +31,16 @@ module ReactiveActions
       class_option :quiet, type: :boolean, default: false,
                            desc: 'Run with minimal output'
 
+      # Rate limiting options
+      class_option :enable_rate_limiting, type: :boolean, default: false,
+                                          desc: 'Enable rate limiting features'
+      class_option :enable_global_rate_limiting, type: :boolean, default: false,
+                                                 desc: 'Enable global controller-level rate limiting'
+      class_option :global_rate_limit, type: :numeric, default: 600,
+                                       desc: 'Global rate limit (requests per window)'
+      class_option :global_rate_limit_window, type: :string, default: '1.minute',
+                                              desc: 'Global rate limit window (e.g., "1.minute", "5.minutes")'
+
       def welcome_message
         return if options[:quiet]
 
@@ -39,24 +49,25 @@ module ReactiveActions
         say ''
       end
 
+      def gather_configuration
+        # Gather all configuration before creating files
+        setup_rate_limiting_configuration_for_initializer
+      end
+
       def create_initializer
-        if options[:quiet] || yes?('Create ReactiveActions initializer? (recommended)', :green)
-          template 'initializer.rb', 'config/initializers/reactive_actions.rb'
-          say '✓ Created initializer', :green unless options[:quiet]
-        else
-          say '✗ Skipped initializer creation', :yellow
-        end
+        return unless options[:quiet] || yes?('Create ReactiveActions initializer? (recommended)', :green)
+
+        template 'initializer.rb', 'config/initializers/reactive_actions.rb'
+        say '✓ Created initializer', :green unless options[:quiet]
       end
 
       def create_actions_directory
-        if options[:quiet] || yes?('Create app/reactive_actions directory?', :green)
-          empty_directory 'app/reactive_actions'
-          say '✓ Created actions directory', :green unless options[:quiet]
+        return unless options[:quiet] || yes?('Create app/reactive_actions directory?', :green)
 
-          ask_for_example_action unless options[:skip_example]
-        else
-          say '✗ Skipped actions directory creation', :yellow
-        end
+        empty_directory 'app/reactive_actions'
+        say '✓ Created actions directory', :green unless options[:quiet]
+
+        ask_for_example_action unless options[:skip_example]
       end
 
       def configure_routes
@@ -72,14 +83,11 @@ module ReactiveActions
       def configure_javascript
         return if options[:skip_javascript]
         return unless javascript_needed?
+        return unless options[:quiet] || yes?('Add ReactiveActions JavaScript client?', :green)
 
-        if options[:quiet] || yes?('Add ReactiveActions JavaScript client?', :green)
-          add_javascript_to_importmap
-          add_javascript_initialization
-          say '✓ Added JavaScript client with initialization', :green unless options[:quiet]
-        else
-          say '✗ Skipped JavaScript configuration', :yellow
-        end
+        add_javascript_to_importmap
+        add_javascript_initialization
+        say '✓ Added JavaScript client with initialization', :green unless options[:quiet]
       end
 
       def javascript_configuration_options
@@ -87,6 +95,19 @@ module ReactiveActions
         return unless javascript_needed?
 
         configure_javascript_options
+      end
+
+      def rate_limiting_configuration
+        # Show rate limiting configuration summary if it was configured
+        return unless @rate_limiting_config && @rate_limiting_config[:rate_limiting_enabled] && !options[:quiet]
+
+        say '', :green
+        say '✓ Rate limiting configured:', :green
+        say "  - Rate limiting: #{@rate_limiting_config[:rate_limiting_enabled] ? 'ENABLED' : 'DISABLED'}", :blue
+        say "  - Global rate limiting: #{@rate_limiting_config[:global_rate_limiting_enabled] ? 'ENABLED' : 'DISABLED'}", :blue
+        return unless @rate_limiting_config[:global_rate_limiting_enabled]
+
+        say "  - Global limit: #{@rate_limiting_config[:global_rate_limit]} requests per #{@rate_limiting_config[:global_rate_limit_window]}", :blue
       end
 
       def configuration_options
@@ -109,6 +130,62 @@ module ReactiveActions
       end
 
       private
+
+      def setup_rate_limiting_configuration_for_initializer
+        if rate_limiting_options_provided?
+          configure_rate_limiting_from_options_quietly
+        elsif !options[:quiet] && ask_about_rate_limiting?
+          configure_rate_limiting_interactively
+        else
+          @rate_limiting_config = {}
+        end
+      end
+
+      def rate_limiting_options_provided?
+        options[:enable_rate_limiting] || options[:enable_global_rate_limiting]
+      end
+
+      def ask_about_rate_limiting?
+        yes?('Configure rate limiting? (optional but recommended for production)', :green)
+      end
+
+      def configure_rate_limiting_from_options_quietly
+        @rate_limiting_config = {
+          rate_limiting_enabled: options[:enable_rate_limiting] || options[:enable_global_rate_limiting],
+          global_rate_limiting_enabled: options[:enable_global_rate_limiting]
+        }
+
+        return unless options[:enable_global_rate_limiting]
+
+        @rate_limiting_config[:global_rate_limit] = options[:global_rate_limit]
+        @rate_limiting_config[:global_rate_limit_window] = options[:global_rate_limit_window]
+      end
+
+      def configure_rate_limiting_interactively
+        @rate_limiting_config = {}
+
+        enable_rate_limiting = yes?('Enable rate limiting features?', :green)
+        @rate_limiting_config[:rate_limiting_enabled] = enable_rate_limiting
+        return unless enable_rate_limiting
+
+        enable_global = yes?('Enable global controller-level rate limiting? (recommended)', :green)
+        @rate_limiting_config[:global_rate_limiting_enabled] = enable_global
+
+        return unless enable_global
+
+        limit = ask('Global rate limit (requests per window):', default: 600)
+        @rate_limiting_config[:global_rate_limit] = limit.to_i
+
+        window = ask('Global rate limit window:',
+                     limited_to: %w[30.seconds 1.minute 5.minutes 15.minutes 1.hour],
+                     default: '1.minute')
+        @rate_limiting_config[:global_rate_limit_window] = window
+
+        return unless yes?('Configure custom rate limit key generator? (advanced)', :green)
+
+        say 'You can customize how rate limit keys are generated in the initializer.'
+        @rate_limiting_config[:custom_key_generator] = true
+      end
 
       def should_skip_example_action?
         return true if options[:skip_example]
@@ -192,26 +269,11 @@ module ReactiveActions
         app_js_path = app_js_paths.find { |path| File.exist?(path) }
 
         if app_js_path
-          # Check if ReactiveActions is already configured
           app_js_content = File.read(app_js_path)
           return if app_js_content.include?('ReactiveActions') || app_js_content.include?('reactive_actions')
 
-          # Generate JavaScript initialization code
           js_config = generate_javascript_config
-
-          js_code = <<~JAVASCRIPT
-
-            // Import and initialize ReactiveActions
-            import ReactiveActionsClient from "reactive_actions"
-
-            // Create and configure ReactiveActions instance
-            const reactiveActions = new ReactiveActionsClient(#{js_config});
-
-            #{generate_initialization_code}
-
-            // Make ReactiveActions globally available
-            window.ReactiveActions = reactiveActions;
-          JAVASCRIPT
+          js_code = build_javascript_code(js_config)
 
           append_to_file app_js_path, js_code
           say "✓ Added ReactiveActions initialization to #{app_js_path}", :green unless options[:quiet]
@@ -222,12 +284,9 @@ module ReactiveActions
 
       def generate_javascript_config
         config = {}
-
-        # Add mount path if different from default
         mount_path = determine_mount_path || options[:mount_path]
         config[:baseUrl] = "#{mount_path}/execute" if mount_path != '/reactive_actions'
 
-        # Add configuration options
         config[:enableAutoBinding] = javascript_option_value(:enable_dom_binding)
         config[:enableMutationObserver] = javascript_option_value(:enable_mutation_observer)
         config[:defaultHttpMethod] = javascript_option_value(:default_http_method, 'POST')
@@ -240,6 +299,22 @@ module ReactiveActions
         config.empty? ? '{}' : JSON.pretty_generate(config)
       end
 
+      def build_javascript_code(js_config)
+        <<~JAVASCRIPT
+
+          // Import and initialize ReactiveActions
+          import ReactiveActionsClient from "reactive_actions"
+
+          // Create and configure ReactiveActions instance
+          const reactiveActions = new ReactiveActionsClient(#{js_config});
+
+          #{generate_initialization_code}
+
+          // Make ReactiveActions globally available
+          window.ReactiveActions = reactiveActions;
+        JAVASCRIPT
+      end
+
       def generate_initialization_code
         if javascript_option_value(:auto_initialize)
           <<~JAVASCRIPT.strip
@@ -249,10 +324,7 @@ module ReactiveActions
             document.addEventListener('turbo:frame-load', () => reactiveActions.initialize());
           JAVASCRIPT
         else
-          <<~JAVASCRIPT.strip
-            // Manual initialization - call reactiveActions.initialize() when ready
-            // Example: reactiveActions.initialize();
-          JAVASCRIPT
+          '// Manual initialization - call reactiveActions.initialize() when ready'
         end
       end
 
@@ -271,22 +343,17 @@ module ReactiveActions
       def configure_javascript_options
         return unless yes?('Configure JavaScript client options?', :green)
 
-        # Auto-initialize option
-        auto_init = yes?('Auto-initialize ReactiveActions on page load? (recommended)', :green)
         @javascript_options ||= {}
-        @javascript_options[:auto_initialize] = auto_init
+        @javascript_options[:auto_initialize] = yes?('Auto-initialize ReactiveActions on page load? (recommended)', :green)
 
-        # DOM binding option
         enable_dom = yes?('Enable automatic DOM binding? (recommended)', :green)
         @javascript_options[:enable_dom_binding] = enable_dom
 
-        # Mutation observer option
         if enable_dom
           enable_observer = yes?('Enable mutation observer for dynamic content? (recommended)', :green)
           @javascript_options[:enable_mutation_observer] = enable_observer
         end
 
-        # Default HTTP method
         http_methods = %w[POST GET PUT PATCH DELETE]
         default_method = ask('Default HTTP method:', limited_to: http_methods, default: 'POST')
         @javascript_options[:default_http_method] = default_method unless default_method == 'POST'
@@ -295,9 +362,7 @@ module ReactiveActions
       def add_to_sprockets_manifest
         return unless File.exist?('app/assets/config/manifest.js')
 
-        append_to_file 'app/assets/config/manifest.js' do
-          "\n//= link reactive_actions.js\n"
-        end
+        append_to_file 'app/assets/config/manifest.js', "\n//= link reactive_actions.js\n"
       end
 
       def configure_delegated_methods
@@ -351,6 +416,11 @@ module ReactiveActions
 
         template 'example_action.rb', "app/reactive_actions/#{sanitized_name}.rb"
         say "✓ Created #{sanitized_name}.rb", :green unless options[:quiet]
+      end
+
+      # Template method to access rate limiting config in templates
+      def rate_limiting_config
+        @rate_limiting_config || {}
       end
     end
   end

@@ -4,6 +4,9 @@ module ReactiveActions
   # Base class for reactive actions
   # Provides common functionality for executing actions and handling responses
   class ReactiveAction
+    include Concerns::SecurityChecks
+    include Concerns::RateLimiter
+
     attr_reader :action_params, :result, :controller
 
     # Initialize a new reactive action
@@ -25,6 +28,8 @@ module ReactiveActions
       ReactiveActions.logger.info "Running action #{self.class.name} with params: #{action_params.inspect}"
 
       begin
+        # Run security checks first
+        run_security_checks
         # Run the action
         controller.instance_exec(&method(:action))
         # Run the response

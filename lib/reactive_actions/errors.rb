@@ -21,4 +21,21 @@ module ReactiveActions
 
   # Raised when the user is not authorized to perform the action
   class UnauthorizedError < Error; end
+
+  # Raised when a security check fails
+  class SecurityCheckError < Error; end
+
+  # Raised when rate limit is exceeded
+  class RateLimitExceededError < Error
+    attr_reader :limit, :window, :retry_after, :current
+
+    def initialize(limit:, window:, retry_after:, current:, message: nil)
+      @limit = limit
+      @window = window
+      @retry_after = retry_after
+      @current = current
+
+      super(message || "Rate limit exceeded: #{current}/#{limit} requests in #{window.inspect}")
+    end
+  end
 end

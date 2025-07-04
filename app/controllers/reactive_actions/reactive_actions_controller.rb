@@ -4,6 +4,9 @@ module ReactiveActions
   # Main controller for handling reactive action requests
   # Processes action execution and manages error handling for the ReactiveActions engine
   class ReactiveActionsController < ApplicationController
+    # Include rate limiting functionality
+    include ReactiveActions::Controller::RateLimiter
+
     # Allow this action to handle any HTTP method
     def execute
       ReactiveActions.logger.info "ReactiveActionsController#execute[#{request.method}]: #{params.inspect}"
@@ -118,7 +121,8 @@ module ReactiveActions
         'MissingParameterError' => [:bad_request, 'MISSING_PARAMETER'],
         'InvalidParametersError' => [:bad_request, 'INVALID_PARAMETERS'],
         'UnauthorizedError' => [:forbidden, 'UNAUTHORIZED'],
-        'ActionExecutionError' => [:unprocessable_entity, 'EXECUTION_ERROR']
+        'ActionExecutionError' => [:unprocessable_entity, 'EXECUTION_ERROR'],
+        'RateLimitExceededError' => [:too_many_requests, 'RATE_LIMIT_EXCEEDED']
       }
 
       error_type = exception.class.name.demodulize
